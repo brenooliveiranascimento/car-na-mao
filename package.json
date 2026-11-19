@@ -1,0 +1,20 @@
+{
+  "name": "car-na-mao",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "CAR na Mão: retificação do Cadastro Ambiental Rural pelo celular (app, API e site).",
+  "scripts": {
+    "setup": "npm install && npm --prefix apps/api ci && npm --prefix apps/web ci && npm --prefix apps/mobile ci",
+    "dev": "concurrently -k --handle-input --default-input-target mobile -n server,mobile -c green,blue \"npm:dev:server\" \"npm:dev:mobile\"",
+    "dev:server": "docker compose up --build",
+    "dev:mobile": "./scripts/dev-mobile.sh",
+    "down": "docker compose down",
+    "db:seed": "docker compose exec api node dist/database/seed.js",
+    "typecheck": "npm --prefix apps/api run typecheck && npm --prefix apps/web run typecheck && npm --prefix apps/mobile run typecheck",
+    "test": "npm --prefix apps/api test",
+    "deploy": "./scripts/deploy.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

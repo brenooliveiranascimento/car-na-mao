@@ -1,0 +1,51 @@
+# Production (VPS): database + API + site, reachable only from the host.
+# A reverse proxy already running on the VPS (Nginx, Caddy, Traefik…) publishes them
+# with HTTPS. See docs/DEPLOY.md.
+name: car-na-mao
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: carnamao
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: carnamao
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carnamao -d carnamao"]
+      interval: 10s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      target: runtime
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://carnamao:${POSTGRES_PASSWORD}@db:5432/carnamao
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    ports:
+      - "127.0.0.1:${API_PORT:-3010}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      target: runtime
+      args:
+        NEXT_PUBLIC_REPOSITORY_URL: ${NEXT_PUBLIC_REPOSITORY_URL:-}
+        NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3011}:3000"
+
+volumes:
+  pgdata:
